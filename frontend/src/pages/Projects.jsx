@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { fetchProjects } from '../services/api';  // Assume this API service is created
+import { fetchProjects } from '../services/api';  // Ensure the API is correctly implemented
 
 // Container for the project section without scrolling effect
 const ProjectContainer = styled.div`
@@ -47,11 +47,11 @@ const ProjectButton = styled.button`
 
 const ProjectSection = () => {
   const [projects, setProjects] = useState([]);
-  
+
   useEffect(() => {
     // Fetch projects data from the backend
     const loadProjects = async () => {
-      const projectData = await fetchProjects();  // Assuming the API returns an array of projects
+      const projectData = await fetchProjects();  // Ensure the API returns an array of projects
       setProjects(projectData);
     };
 
@@ -67,13 +67,21 @@ const ProjectSection = () => {
         We know what buyers are looking for and suggest projects that will bring clients top dollar for the sale of their homes.
       </p>
       <ProjectContainer>
-        {projects.map((project) => (
-          <ProjectCard key={project._id}>
-            <ProjectImage src={project.image} alt={project.title} />
-            <ProjectTitle>{project.title}</ProjectTitle>
-            <ProjectButton>See More</ProjectButton>
-          </ProjectCard>
-        ))}
+        {projects.length === 0 ? (
+          <p>No projects available at the moment.</p> // If no projects are available, show this message
+        ) : (
+          projects.map((project) => (
+            <ProjectCard key={project._id}>
+              {/* Assuming project.image is the relative file path or URL of the uploaded image */}
+              <ProjectImage 
+                src={`http://localhost:5000/${project.image}`}  // Ensure this URL is correct
+                alt={project.name} 
+              />
+              <ProjectTitle>{project.name}</ProjectTitle>
+              <ProjectButton>See More</ProjectButton>
+            </ProjectCard>
+          ))
+        )}
       </ProjectContainer>
     </div>
   );

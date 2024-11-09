@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaProjectDiagram, FaEnvelope, FaClipboardList } from 'react-icons/fa';
+import axios from 'axios';
 
 const Admin = () => {
     const [activeSection, setActiveSection] = useState('Project');
@@ -56,34 +57,43 @@ const Admin = () => {
 // Project Management Section
 const ProjectManagement = () => {
     const [projects, setProjects] = useState([]);
-    const [newProject, setNewProject] = useState({ name: '', description: '', image: '' });
+    const [newProject, setNewProject] = useState({ name: '', description: '', image: null });
 
     useEffect(() => {
-        fetch('/api/projects')
-            .then((res) => res.json())
-            .then((data) => setProjects(data))
+        axios.get('http://localhost:5000/api/projects')
+            .then((response) => {
+                if (Array.isArray(response.data)) {
+                    setProjects(response.data);
+                } else {
+                    console.error('Expected an array but got:', response.data);
+                }
+            })
             .catch((error) => console.error("Failed to fetch projects:", error));
     }, []);
 
     const handleAddProject = (event) => {
         event.preventDefault();
-        fetch('/api/projects', {
-            method: 'POST',
+    
+        const formData = new FormData();
+        formData.append('name', newProject.name);
+        formData.append('description', newProject.description);
+        formData.append('image', newProject.image); // Handle file upload
+    
+        axios.post('http://localhost:5000/api/projects', formData, {
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'multipart/form-data',
             },
-            body: JSON.stringify(newProject),
         })
-            .then((res) => res.json())
-            .then((data) => {
-                setProjects([...projects, data]);
-                setNewProject({ name: '', description: '', image: '' });
-            })
-            .catch((error) => console.error("Failed to add project:", error));
+        .then((response) => {
+            setProjects([...projects, response.data]);
+            setNewProject({ name: '', description: '', image: null });
+        })
+        .catch((error) => console.error("Failed to add project:", error));
     };
+    
 
     const handleDeleteProject = (id) => {
-        fetch(`/api/projects/${id}`, { method: 'DELETE' })
+        axios.delete(`http://localhost:5000/api/projects/${id}`)
             .then(() => {
                 setProjects(projects.filter((project) => project._id !== id));
             })
@@ -135,22 +145,30 @@ const ProjectManagement = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {projects.map((project) => (
-                        <tr key={project._id}>
-                            <td className="border px-4 py-2"><img src={project.image} alt={project.name} className="w-16 h-16" /></td>
-                            <td className="border px-4 py-2">{project.name}</td>
-                            <td className="border px-4 py-2">{project.description}</td>
-                            <td className="border px-4 py-2">
-                                <button className="text-blue-500 hover:underline mr-2">Edit</button>
-                                <button
-                                    className="text-red-500 hover:underline"
-                                    onClick={() => handleDeleteProject(project._id)}
-                                >
-                                    Delete
-                                </button>
-                            </td>
+                    {projects.length > 0 ? (
+                        projects.map((project) => (
+                            <tr key={project._id}>
+                                <td className="border px-4 py-2">
+                                    <img src={project.image} alt={project.name} className="w-16 h-16" />
+                                </td>
+                                <td className="border px-4 py-2">{project.name}</td>
+                                <td className="border px-4 py-2">{project.description}</td>
+                                <td className="border px-4 py-2">
+                                    <button className="text-blue-500 hover:underline mr-2">Edit</button>
+                                    <button
+                                        className="text-red-500 hover:underline"
+                                        onClick={() => handleDeleteProject(project._id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="4" className="text-center py-4">No projects available</td>
                         </tr>
-                    ))}
+                    )}
                 </tbody>
             </table>
         </div>
@@ -163,31 +181,23 @@ const ClientManagement = () => {
     const [newClient, setNewClient] = useState({ name: '', email: '', phone: '' });
 
     useEffect(() => {
-        fetch('/api/clients')
-            .then((res) => res.json())
-            .then((data) => setClients(data))
+        axios.get('http://localhost:5000/api/clients')
+            .then((response) => setClients(response.data))
             .catch((error) => console.error("Failed to fetch clients:", error));
     }, []);
 
     const handleAddClient = (event) => {
         event.preventDefault();
-        fetch('/api/clients', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newClient),
-        })
-            .then((res) => res.json())
-            .then((data) => {
-                setClients([...clients, data]);
+        axios.post('http://localhost:5000/api/clients', newClient)
+            .then((response) => {
+                setClients([...clients, response.data]);
                 setNewClient({ name: '', email: '', phone: '' });
             })
             .catch((error) => console.error("Failed to add client:", error));
     };
 
     const handleDeleteClient = (id) => {
-        fetch(`/api/clients/${id}`, { method: 'DELETE' })
+        axios.delete(`http://localhost:5000/api/clients/${id}`)
             .then(() => {
                 setClients(clients.filter((client) => client._id !== id));
             })
@@ -228,55 +238,118 @@ const ClientManagement = () => {
                         onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
                     />
                 </div>
-                <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-md mt-4">Add Client</button>
+                <button type="submit" className="bg-blue-500 text-white py-2 px-4 rounded-md mt-4">Save Client</button>
             </form>
 
             <h3 className="text-xl font-semibold mb-4">Existing Clients</h3>
             <table className="w-full border border-gray-200">
                 <thead>
                     <tr className="bg-gray-100">
-                        <th className="px-4 py-2">Client Name</th>
+                        <th className="px-4 py-2">Name</th>
                         <th className="px-4 py-2">Email</th>
                         <th className="px-4 py-2">Phone</th>
                         <th className="px-4 py-2">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {clients.map((client) => (
-                        <tr key={client._id}>
-                            <td className="border px-4 py-2">{client.name}</td>
-                            <td className="border px-4 py-2">{client.email}</td>
-                            <td className="border px-4 py-2">{client.phone}</td>
-                            <td className="border px-4 py-2">
-                                <button className="text-blue-500 hover:underline mr-2">Edit</button>
-                                <button
-                                    className="text-red-500 hover:underline"
-                                    onClick={() => handleDeleteClient(client._id)}
-                                >
-                                    Delete
-                                </button>
-                            </td>
+                    {clients.length > 0 ? (
+                        clients.map((client) => (
+                            <tr key={client._id}>
+                                <td className="border px-4 py-2">{client.name}</td>
+                                <td className="border px-4 py-2">{client.email}</td>
+                                <td className="border px-4 py-2">{client.phone}</td>
+                                <td className="border px-4 py-2">
+                                    <button className="text-blue-500 hover:underline mr-2">Edit</button>
+                                    <button
+                                        className="text-red-500 hover:underline"
+                                        onClick={() => handleDeleteClient(client._id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="4" className="text-center py-4">No clients available</td>
                         </tr>
-                    ))}
+                    )}
                 </tbody>
             </table>
         </div>
     );
 };
 
-// Subscribers Section
+// Contact Form Section
+const ContactFormDetails = () => {
+    const [contactForms, setContactForms] = useState([]);
+
+    useEffect(() => {
+        axios.get('http://localhost:5000/api/contactForms')
+            .then((response) => setContactForms(response.data))
+            .catch((error) => console.error("Failed to fetch contact forms:", error));
+    }, []);
+
+    const handleDeleteContactForm = (id) => {
+        axios.delete(`http://localhost:5000/api/contactForms/${id}`)
+            .then(() => {
+                setContactForms(contactForms.filter((form) => form._id !== id));
+            })
+            .catch((error) => console.error("Failed to delete contact form:", error));
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-xl font-semibold mb-4">Contact Form Submissions</h3>
+            <table className="w-full border border-gray-200">
+                <thead>
+                    <tr className="bg-gray-100">
+                        <th className="px-4 py-2">Name</th>
+                        <th className="px-4 py-2">Email</th>
+                        <th className="px-4 py-2">Message</th>
+                        <th className="px-4 py-2">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {contactForms.length > 0 ? (
+                        contactForms.map((form) => (
+                            <tr key={form._id}>
+                                <td className="border px-4 py-2">{form.name}</td>
+                                <td className="border px-4 py-2">{form.email}</td>
+                                <td className="border px-4 py-2">{form.message}</td>
+                                <td className="border px-4 py-2">
+                                    <button
+                                        className="text-red-500 hover:underline"
+                                        onClick={() => handleDeleteContactForm(form._id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="4" className="text-center py-4">No contact form submissions</td>
+                        </tr>
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+// Subscriber Section
 const SubscribedEmails = () => {
     const [subscribers, setSubscribers] = useState([]);
-    
+
     useEffect(() => {
-        fetch('/api/subscribers')
-            .then((res) => res.json())
-            .then((data) => setSubscribers(data))
+        axios.get('http://localhost:5000/api/subscribers')
+            .then((response) => setSubscribers(response.data))
             .catch((error) => console.error("Failed to fetch subscribers:", error));
     }, []);
 
     const handleDeleteSubscriber = (id) => {
-        fetch(`/api/subscribers/${id}`, { method: 'DELETE' })
+        axios.delete(`http://localhost:5000/api/subscribers/${id}`)
             .then(() => {
                 setSubscribers(subscribers.filter((subscriber) => subscriber._id !== id));
             })
@@ -294,72 +367,25 @@ const SubscribedEmails = () => {
                     </tr>
                 </thead>
                 <tbody>
-                    {subscribers.map((subscriber) => (
-                        <tr key={subscriber._id}>
-                            <td className="border px-4 py-2">{subscriber.email}</td>
-                            <td className="border px-4 py-2">
-                                <button
-                                    className="text-red-500 hover:underline"
-                                    onClick={() => handleDeleteSubscriber(subscriber._id)}
-                                >
-                                    Delete
-                                </button>
-                            </td>
+                    {subscribers.length > 0 ? (
+                        subscribers.map((subscriber) => (
+                            <tr key={subscriber._id}>
+                                <td className="border px-4 py-2">{subscriber.email}</td>
+                                <td className="border px-4 py-2">
+                                    <button
+                                        className="text-red-500 hover:underline"
+                                        onClick={() => handleDeleteSubscriber(subscriber._id)}
+                                    >
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="2" className="text-center py-4">No subscribers</td>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
-};
-
-// Contact Form Section
-const ContactFormDetails = () => {
-    const [contactForms, setContactForms] = useState([]);
-    
-    useEffect(() => {
-        fetch('/api/contactforms')
-            .then((res) => res.json())
-            .then((data) => setContactForms(data))
-            .catch((error) => console.error("Failed to fetch contact forms:", error));
-    }, []);
-
-    const handleDeleteContactForm = (id) => {
-        fetch(`/api/contactforms/${id}`, { method: 'DELETE' })
-            .then(() => {
-                setContactForms(contactForms.filter((form) => form._id !== id));
-            })
-            .catch((error) => console.error("Failed to delete contact form:", error));
-    };
-
-    return (
-        <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-xl font-semibold mb-4">Contact Forms</h3>
-            <table className="w-full border border-gray-200">
-                <thead>
-                    <tr className="bg-gray-100">
-                        <th className="px-4 py-2">Name</th>
-                        <th className="px-4 py-2">Email</th>
-                        <th className="px-4 py-2">Message</th>
-                        <th className="px-4 py-2">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {contactForms.map((form) => (
-                        <tr key={form._id}>
-                            <td className="border px-4 py-2">{form.name}</td>
-                            <td className="border px-4 py-2">{form.email}</td>
-                            <td className="border px-4 py-2">{form.message}</td>
-                            <td className="border px-4 py-2">
-                                <button
-                                    className="text-red-500 hover:underline"
-                                    onClick={() => handleDeleteContactForm(form._id)}
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
+                    )}
                 </tbody>
             </table>
         </div>
