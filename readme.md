@@ -1,6 +1,6 @@
 # Achieving Growth - Consulting Website
 
-!-- Replace with the actual path to your screenshot -->
+
 
 ## Overview
 
