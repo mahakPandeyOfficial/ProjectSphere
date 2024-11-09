@@ -51,7 +51,8 @@ To run this project locally, follow these steps:
    ```
   #### Screenshots
 ## Hero Section with Call-to-Action
-![Screenshot 2024-11-09 053904](https://github.com/user-attachments/assets/b1075c6d-23ba-4652-96e7-8307064afe07)
+![image](https://github.com/user-attachments/assets/49e7be52-dc55-4964-a144-acf0c632e15c)
+
 
 
 ## Contact Form 
